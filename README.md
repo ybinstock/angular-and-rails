@@ -137,7 +137,7 @@ app.controller('RaffleController', [
 In raffler.js, create a resource module. When using `railsResourceFactory`, the code below is the equivalent of declaring `resource: player`, but for Angular.
 
 ```	
-app('Player',
+app.factory('Player',
   function (railsResourceFactory) {
     var resource = railsResourceFactory({
       url: '/players',
@@ -146,7 +146,7 @@ app('Player',
 });
 ```
 
-Again, make the raffler app depend on "rails" service:
+Make the raffler app depend on "rails" service:
 
 ```
 var app = angular.module("raffler", [
