@@ -37,6 +37,11 @@ We will be using a gem `angularjs-rails-resource` that is specifically designed 
 
 	gem 'angularjs-rails-resource', '~> 1.1.1'
 
+Include gems in asset pipeline. In `app/assets/javascripts/application.js`, add:
+
+	//= require angular
+	//= require angularjs/rails/resource
+
 b) Turn app into an angular app
 
 	<html ng-app>
@@ -87,7 +92,7 @@ class PlayersController < ApplicationController
 end
 ```	
 
-Add playes resource routes:
+Add players resource routes:
 
 	resources :players
 
@@ -108,24 +113,130 @@ b) In raffler.js, create angular app module
 	
 c) Add application name to `ng-app` tag
 
+	<html ng-app='raffler'>
+
+Note that in the html tag, the app name lowercase. The actual module name is uppercase.
 
 
-Craeta Player factory:
+####4) Create a RaffleController
 
-```	
-app.factory("Player", ["$resource", function($resource) {
-    return $resource("/players/:id", { id: "@id"}, {update: { method: "PUT"}});
-  }
+
+```
+var appControllers = angular.module('raffler.controllers', []);
+appControllers.controller('RaffleController', [ 
+	"$scope",
+	function($scope) { 
+	$scope.test = 123;
+}
+```
+Make raffler app depemd on new controller module
+
+```
+var app = angular.module("raffler", [
+	'raffler.controllers'
 ]);
 ```
 
-Create RafflerController
+**Exercise:** Test controller in view
+
+
+####5) Make raffler app talk to "players api"
+
+In raffler.js, create a resource module. When using `railsResourceFactory`, the code below is the equivalent of declaring `resource: player`, but for Angular.
+
+```	
+var resourceModule = angular.module('raffler.resources', ["rails"]);
+
+resourceModule.factory('Player',
+  function (railsResourceFactory) {
+    var resource = railsResourceFactory({
+      url: '/players',
+      name: 'player'});
+    return resource;
+});
+```
+
+Again, make the raffler app depend on new module:
 
 ```
-app.controller()RaffleCtrl = [
-  "$scope", "Entry", function($scope, Entry) {
-    $scope.entries = Entry.query();
+var app = angular.module("raffler", [
+	'raffler.controllers',
+	'raffler.resources'
+	]);
 ```
+
+Inject the new resource module in the controller:
+
+```
+var appControllers = angular.module('raffler.controllers', []);
+appControllers.controller('RaffleController', [ 
+	"$scope",
+	"Player",
+	function($scope, Player) { 
+	...
+}
+```
+
+Now we can use `Player` resource in the Angular controller like we would use ActiveRecord Models in rails controller. Very cool!
+
+```
+Player.query()
+Player.query({ name: "Cartman"})
+
+var newPlayer = new Player({ name: "Jack"})
+newPlayer.create()
+
+newPlayer.delete()
+
+newPlayer.name = "Eric Cartman"
+newPlayer.update()
+```
+
+So let's use it and get the list of players from the api server. Let's add this to the angular controller.
+
+```
+// get list of all players
+Player.query().then(function(result) {
+    	$scope.players = result;
+  	})
+```  	
+
+Here's the new view:
+
+
+	<h1>Southpark Raffle</h1>
+	<div ng-controller="RaffleController">
+  	<ul>
+    	<li ng-repeat="player in players">
+      	{{player.name}}
+    	</li>
+  	</ul>
+	</div>
+
+
+####6) POSTing from Angular - Adding players
+
+Let's add an input form:
+
+	<form ng-submit="addPlayer()">
+		<input type="text" ng-model="newName">
+		<input type="submit" value="Add">
+	</form>
+	
+And an event handler in the controller:
+
+	$scope.addPlayer = function() {
+		var newPlayer = new Player({
+			name: $scope.newName
+    	})
+		newPlayer.create().then(function(newlyCreatedPlayer){
+			$scope.players.push(newlyCreatedPlayer);
+			$scope.newName = "";
+      });
+    };
+
+	
+
 
   
   
